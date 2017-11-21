@@ -1,12 +1,15 @@
 APIgateway example with Kong
-----------------------------
+============================
 
-###Requirements for example
+Requirements for example
+------------------------
 
 * Docker version 17.05.0-ce, build 89658be
 * docker-compose version 1.11.1, build 7c5d5e4
 
-###Commands
+Commands
+--------
+
 
 * Install the project
 ~~~~
