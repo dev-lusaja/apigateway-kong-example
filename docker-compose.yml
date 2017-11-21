@@ -1,0 +1,56 @@
+version: '2'
+
+services:
+  cassandra:
+    container_name: kong-database
+    build:
+      context: gateway/db
+    ports:
+      - 9042:9042
+
+  migrations:
+    links:
+      - cassandra
+    build:
+      context: gateway/kong
+    environment:
+      KONG_DATABASE: cassandra
+      KONG_PG_HOST: cassandra
+      KONG_CASSANDRA_CONTACT_POINTS: cassandra
+    command: /tmp/wait-for-it.sh -t 60 cassandra:9042 -- kong migrations up
+
+  kong:
+    container_name: kong-app
+    links:
+      - cassandra
+      - app_a
+    build:
+      context: gateway/kong
+    environment:
+      KONG_DATABASE: cassandra
+      KONG_PG_HOST: cassandra
+      KONG_CASSANDRA_CONTACT_POINTS: cassandra
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+    ports:
+      - 8000:8000
+      - 8443:8443
+      - 8001:8001
+      - 8444:8444
+    command: /tmp/wait-for-it.sh -t 60 cassandra:9042 -- sh -c '/docker-entrypoint.sh /usr/local/openresty/nginx/sbin/nginx -c /usr/local/kong/nginx.conf -p /usr/local/kong/'
+
+  app_a:
+    container_name: app-a
+    build:
+      context: api/A
+    ports:
+      - 8081:80
+
+  app_b:
+    container_name: app-b
+    build:
+      context: api/B
+    ports:
+      - 8082:80
