@@ -1,5 +1,10 @@
 .DEFAULT_GOAL := help
 
+API_HOST_8001_API = http://localhost:8001/api
+API_HOST_8001_APIS = http://localhost:8001/apis
+API_HOST_8001_CONSUMERS = http://localhost:8001/consumers
+API_HOST_8000 = http://localhost:8000/
+
 install: ## Install the project for first time
 	@echo "creating the Cassandra DB"
 	@make start_db
@@ -63,16 +68,37 @@ stop_app_b: ## Stop the App B
 	@docker-compose stop app_b
 
 add_resource: ## Adding resource
-	@curl -i -X POST \
-		--url http://localhost:8001/apis/ \
+	@curl -v -i -X POST \
+		--url $(API_HOST_8001_CONSUMERS) \
 		--data 'name=${NAME}' \
 		--data 'hosts=${HOST}' \
 		--data 'upstream_url=${UPSTREAM}'
 
+enable_auth: ## Enable auth plugin
+	@curl -v -i -X POST \
+		--url $(API_HOST_8001_APIS)/${API_NAME}/plugins/ \
+		--data 'name=key-auth'
+
+create_customer: ## Create consumers
+	@echo Creating consumer
+	@curl -v -i -X POST \
+		--url $(API_HOST_8001_CONSUMERS) \
+		--data "username=${USER_NAME}"
+	@echo Creating key-auth
+	@curl -v -i -X POST \
+		--url $(API_HOST_8001_CONSUMERS)/${USER_NAME}/key-auth/ \
+		--data 'key=${API_KEY}'
+
 test: ## Test resource
-	@curl -i -X GET \
-		--url http://localhost:8000/ \
+	@curl -v -i -X GET \
+		--url $(API_HOST_8000) \
 		--header 'Host: ${HOST}'
+
+test_auth: ## Test using api key
+	@curl -i -X GET \
+		--url $(API_HOST_8000) \
+		--header "Host: ${HOST}" \
+		--header "apikey: ${API_KEY}"
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-16s\033[0m %s\n", $$1, $$2}'
